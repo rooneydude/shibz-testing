@@ -201,6 +201,65 @@ def plot_results(x, V, energies, wavefunctions, well_half_width, V0):
     return fig1, fig2
 
 
+def plot_well_energy_diagram(x, V, energies, well_half_width, V0):
+    """Plot the potential well shape with horizontal energy level lines.
+
+    This produces a clear energy diagram showing the square well profile
+    and where each bound-state energy sits relative to the well depth.
+    """
+    bound_mask = classify_bound_states(energies, V0)
+    num_states = len(energies)
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    # Draw the potential profile as a thick step function
+    ax.plot(x, V, "k-", linewidth=2.5, label="V(x)")
+
+    # Fill the well interior to highlight the shape
+    ax.fill_between(x, V, alpha=0.10, color="steelblue")
+
+    # Reference lines for the well floor and barrier height
+    ax.axhline(0.0, color="gray", linestyle="--", linewidth=0.6, alpha=0.5)
+    ax.axhline(V0, color="gray", linestyle="--", linewidth=0.6, alpha=0.5)
+    ax.text(x[-1] * 0.82, V0 + 1.5, f"V$_0$ = {V0}", fontsize=10, color="gray")
+
+    # Draw energy levels as horizontal lines clipped to the well region
+    colors = plt.cm.plasma(np.linspace(0.15, 0.85, num_states))
+    for n in range(num_states):
+        E_n = energies[n]
+        state_type = "bound" if bound_mask[n] else "quasi-bound"
+
+        # Classically allowed region for this energy
+        if bound_mask[n]:
+            # Turning points: where E_n = V(x)
+            inside = x[V <= E_n]
+            x_left, x_right = inside[0], inside[-1]
+        else:
+            x_left, x_right = x[0], x[-1]
+
+        ax.hlines(E_n, x_left, x_right, colors=colors[n], linewidth=2.0)
+        ax.text(
+            x_right + 0.15, E_n,
+            f"n={n}  E={E_n:.2f}  ({state_type})",
+            fontsize=9, va="center", color=colors[n],
+        )
+
+    # Mark the well walls
+    ax.axvline(-well_half_width, color="black", linestyle=":", linewidth=0.8, alpha=0.4)
+    ax.axvline(well_half_width, color="black", linestyle=":", linewidth=0.8, alpha=0.4)
+    ax.text(-well_half_width, -3, "$-a$", fontsize=11, ha="center")
+    ax.text(well_half_width, -3, "$a$", fontsize=11, ha="center")
+
+    ax.set_xlabel("Position  x", fontsize=13)
+    ax.set_ylabel("Energy", fontsize=13)
+    ax.set_title("Finite Square Well: Energy Diagram", fontsize=15)
+    ax.set_ylim(-5, V0 * 1.25)
+    ax.set_xlim(x[0], x[-1] * 1.55)
+    fig.tight_layout()
+
+    return fig
+
+
 def print_summary(energies, V0):
     """Print a table of computed energy eigenvalues."""
     bound_mask = classify_bound_states(energies, V0)
@@ -261,9 +320,11 @@ def main():
     fig1, fig2 = plot_results(
         x, V, energies, wavefunctions, well_half_width, V0
     )
+    fig3 = plot_well_energy_diagram(x, V, energies, well_half_width, V0)
     fig1.savefig("wavefunctions.png", dpi=150)
     fig2.savefig("probability_densities.png", dpi=150)
-    print("Figures saved: wavefunctions.png, probability_densities.png")
+    fig3.savefig("well_energy_diagram.png", dpi=150)
+    print("Figures saved: wavefunctions.png, probability_densities.png, well_energy_diagram.png")
     plt.show()
 
 
